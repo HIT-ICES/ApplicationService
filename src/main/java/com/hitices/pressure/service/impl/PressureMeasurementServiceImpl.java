@@ -3,6 +3,7 @@ package com.hitices.pressure.service.impl;
 import com.alibaba.fastjson.JSON;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.baomidou.mybatisplus.core.toolkit.ObjectUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hitices.pressure.common.BoundaryTestThread;
 import com.hitices.pressure.common.MResponse;
@@ -29,10 +30,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.file.Files;
-import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 
 @Service
@@ -250,6 +249,11 @@ public class PressureMeasurementServiceImpl implements PressureMeasurementServic
   public boolean addAggregateReport(int planId) {
     AggregateReportVO aggregateReportVO = calculateReport(planId);
     try {
+      AggregateReportVO aggregateReport = pressureMeasurementMapper.getAggregateReport(planId);
+      //检查是否已经创建过聚合报告，只能创建一份聚合报告
+      if(ObjectUtils.isNotNull(aggregateReport) || ObjectUtils.isNotEmpty(aggregateReport)){
+        return false;
+      }
       int res = pressureMeasurementMapper.insertAggregateReport(aggregateReportVO);
       if (res <= 0) {
         return false;
