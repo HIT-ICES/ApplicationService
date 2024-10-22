@@ -7,7 +7,7 @@ import com.baomidou.mybatisplus.core.toolkit.ObjectUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hitices.pressure.common.BoundaryTestThread;
 import com.hitices.pressure.common.MeasureThread;
-import com.hitices.pressure.domain.entity.TimerType;
+import com.hitices.pressure.domain.enum_.TimerType;
 import com.hitices.pressure.domain.vo.*;
 import com.hitices.pressure.repository.PressureMeasurementMapper;
 import com.hitices.pressure.service.PressureMeasurementService;
@@ -17,6 +17,7 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.jmeter.samplers.SampleResult;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -597,6 +598,18 @@ public class PressureMeasurementServiceImpl implements PressureMeasurementServic
       e.printStackTrace();
     }
     return aggregateReportVOList;
+  }
+
+  @Override
+  public AggregateReportEnhanceVO getAggregateReportEnhanceByPlanId(Integer planId) {
+    AggregateReportVO aggregateReport = pressureMeasurementMapper.getAggregateReport(planId);
+    TestPlanVO testPlan = pressureMeasurementMapper.getTestPlanById(planId);
+    AggregateReportEnhanceVO result = new AggregateReportEnhanceVO();
+    //将属性进行复制
+    BeanUtils.copyProperties(aggregateReport,result);
+    result.setNamespace(testPlan.getNamespace());
+    result.setPodName(testPlan.getPodName());
+    return result;
   }
 
 

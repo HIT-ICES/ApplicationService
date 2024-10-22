@@ -1,10 +1,7 @@
 package com.hitices.pressure.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.hitices.pressure.domain.vo.AggregateReportVO;
-import com.hitices.pressure.domain.vo.TestPlanVO;
-import com.hitices.pressure.domain.vo.TestResultVO;
-import com.hitices.pressure.domain.vo.TimerVO;
+import com.hitices.pressure.domain.vo.*;
 import org.apache.jmeter.samplers.SampleResult;
 
 import java.io.IOException;
@@ -64,4 +61,5 @@ public interface PressureMeasurementService {
 
     List<AggregateReportVO> getBoundaryTestResult(int planId);
 
+    AggregateReportEnhanceVO getAggregateReportEnhanceByPlanId(Integer planId);
 }
