@@ -12,6 +12,7 @@ import com.hitices.pressure.entity.*;
 import com.hitices.pressure.repository.PressureMeasurementMapper;
 import com.hitices.pressure.service.PressureMeasurementService;
 import com.hitices.pressure.utils.JMeterUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
@@ -33,18 +34,21 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
+@Slf4j
 @Service
 public class PressureMeasurementServiceImpl implements PressureMeasurementService {
 
   private final List<SampleResult> results = new ArrayList<>();
 
-  @Autowired private PressureMeasurementMapper pressureMeasurementMapper;
+  @Autowired
+  private PressureMeasurementMapper pressureMeasurementMapper;
 
   @Override
   public boolean commonMeasure(TestPlanVO testPlanVO) {
     try {
-      MeasureThread measureThread = new MeasureThread(testPlanVO, this);
+      MeasureThread measureThread = new MeasureThread(testPlanVO, this,pressureMeasurementMapper);
       Thread thread = new Thread(measureThread);
       thread.start();
       testPlanVO.setStatus("Running");
@@ -53,6 +57,29 @@ public class PressureMeasurementServiceImpl implements PressureMeasurementServic
     } catch (Exception e) {
       return false;
     }
+  }
+
+  /**
+   * 采用completableFuture改进，便于编排多个任务
+   * @param testPlanVO
+   * @return
+   */
+  @Override
+  public CompletableFuture<Boolean> commonMeasureFuture(TestPlanVO testPlanVO) {
+    return CompletableFuture.supplyAsync(() -> {
+      try {
+        MeasureThread measureThread = new MeasureThread(testPlanVO, this,pressureMeasurementMapper);
+        measureThread.run();
+        testPlanVO.setStatus("Running");
+        pressureMeasurementMapper.updateTestPlan(testPlanVO);
+        return true;
+      } catch (Exception e) {
+        //todo dubug
+        log.error("出现了bug");;
+        e.printStackTrace();
+        return false;
+      }
+    });
   }
 
   @Override
@@ -92,6 +119,37 @@ public class PressureMeasurementServiceImpl implements PressureMeasurementServic
     } catch (IOException e) {
       return false;
     }*/
+  }
+  @Override
+  public CompletableFuture<Boolean> boundaryMeasureFuture(TestPlanVO testPlanVO) {
+    return CompletableFuture.supplyAsync(() -> {
+      Path path = Paths.get(JMeterUtil.JMX_PATH);
+      Path jmxPath = path.resolve(testPlanVO.getId() + ".jmx");
+      if (!Files.exists(path) || !Files.exists(jmxPath)) {
+        return false;
+      }
+      try {
+        BoundaryTestThread boundaryTestThread = new BoundaryTestThread(testPlanVO, jmxPath.toString());
+        boundaryTestThread.run();
+        testPlanVO.setStatus("Running");
+        pressureMeasurementMapper.updateTestPlan(testPlanVO);
+        return true;
+      } catch (Exception e) {
+        return false;
+      }
+    });
+  }
+  @Override
+  public CompletableFuture<Boolean> measureFuture(int testPlanId) {
+    TestPlanVO testPlanVO = null;
+    try {
+      testPlanVO = getTestPlanById(testPlanId);
+    } catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
+    return testPlanVO.isBoundary()
+            ? boundaryMeasureFuture(testPlanVO)
+            : commonMeasureFuture(testPlanVO);
   }
 
   @Override

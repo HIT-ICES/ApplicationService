@@ -25,6 +25,11 @@ public class TestMeasureController {
     @GetMapping("/getSystem")
     public MResponse<String> getSystem() {
 //        System.out.println("Received");
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
         return new MResponse<String>().successMResponse().data(System.getProperty("os.name"));
     }
 }

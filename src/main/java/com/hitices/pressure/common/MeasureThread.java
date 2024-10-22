@@ -2,6 +2,7 @@ package com.hitices.pressure.common;
 
 import com.hitices.pressure.entity.TestPlanVO;
 import com.hitices.pressure.entity.ThreadGroupVO;
+import com.hitices.pressure.repository.PressureMeasurementMapper;
 import com.hitices.pressure.service.PressureMeasurementService;
 import com.hitices.pressure.utils.JMeterUtil;
 import org.apache.jmeter.control.LoopController;
@@ -21,9 +22,12 @@ public class MeasureThread implements Runnable {
 
     private final PressureMeasurementService pressureMeasurementService;
 
-    public MeasureThread(TestPlanVO testPlanVO, PressureMeasurementService pressureMeasurementService) {
+    private final PressureMeasurementMapper pressureMeasurementMapper;
+
+    public MeasureThread(TestPlanVO testPlanVO, PressureMeasurementService pressureMeasurementService,PressureMeasurementMapper pressureMeasurementMapper) {
         this.testPlanVO = testPlanVO;
         this.pressureMeasurementService = pressureMeasurementService;
+        this.pressureMeasurementMapper = pressureMeasurementMapper;
         this.system = System.getProperty("os.name");
     }
 
@@ -78,7 +82,7 @@ public class MeasureThread implements Runnable {
             //更新test plan 状态
             //这里的testPlanVo可能存在多线程问题，还没仔细想过，应该没啥事吧
             testPlanVO.setStatus("Completed");
-            pressureMeasurementService.updateTestPlan(testPlanVO);
+            pressureMeasurementMapper.updateTestPlan(testPlanVO);
         }
     }
 }

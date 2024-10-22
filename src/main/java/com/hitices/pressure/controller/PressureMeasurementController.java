@@ -8,6 +8,7 @@ import com.hitices.pressure.service.PressureMeasurementService;
 import com.hitices.pressure.utils.ExcelGenerator;
 import com.hitices.pressure.utils.JMeterUtil;
 import javafx.beans.binding.DoubleExpression;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
@@ -29,6 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @CrossOrigin
 @RestController
 @RequestMapping("/pressureMeasurement")

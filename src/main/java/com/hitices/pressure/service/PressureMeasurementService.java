@@ -6,8 +6,18 @@ import org.apache.jmeter.samplers.SampleResult;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 public interface PressureMeasurementService {
+
+    //todo 修改了 boolean改为CompletableFuture<Boolean>
+
+    CompletableFuture<Boolean> commonMeasureFuture(TestPlanVO testPlanVO);
+
+    CompletableFuture<Boolean> boundaryMeasureFuture(TestPlanVO testPlanVO);
+
+    CompletableFuture<Boolean> measureFuture(int testPlanId);
+
 
     boolean commonMeasure(TestPlanVO testPlanVO);
 
