@@ -1,17 +1,10 @@
 package com.hitices.pressure.common;
 
-import com.hitices.pressure.entity.TestPlanVO;
-import com.hitices.pressure.entity.ThreadGroupVO;
-import com.hitices.pressure.service.PressureMeasurementService;
+import com.hitices.pressure.domain.vo.TestPlanVO;
+import com.hitices.pressure.repository.PressureMeasurementMapper;
 import com.hitices.pressure.utils.JMeterUtil;
-import org.apache.jmeter.control.LoopController;
 import org.apache.jmeter.engine.StandardJMeterEngine;
-import org.apache.jmeter.protocol.http.control.HeaderManager;
-import org.apache.jmeter.protocol.http.sampler.HTTPSamplerProxy;
-import org.apache.jmeter.reporters.ResultCollector;
 import org.apache.jmeter.save.SaveService;
-import org.apache.jmeter.testelement.TestPlan;
-import org.apache.jmeter.threads.ThreadGroup;
 import org.apache.jorphan.collections.HashTree;
 
 import java.io.File;
@@ -25,9 +18,12 @@ public class BoundaryTestThread implements Runnable {
 
     private String jmxPath;
 
-    public BoundaryTestThread(TestPlanVO testPlanVO, String jmxPath) {
+    private final PressureMeasurementMapper pressureMeasurementMapper;
+
+    public BoundaryTestThread(TestPlanVO testPlanVO, String jmxPath,PressureMeasurementMapper pressureMeasurementMapper) {
         this.testPlanVO = testPlanVO;
         this.system = System.getProperty("os.name");
+        this.pressureMeasurementMapper = pressureMeasurementMapper;
         this.jmxPath = jmxPath;
     }
 
@@ -35,7 +31,7 @@ public class BoundaryTestThread implements Runnable {
     public void run() {
         try {
             StandardJMeterEngine standardJMeterEngine;
-            if(this.system.equals("Windows 11")) {
+            if(this.system.equals("Windows 11") || this.system.equals("Windows 10")) {
                 standardJMeterEngine = JMeterUtil.init(JMeterUtil.WINDOWS_HOME, JMeterUtil.WINDOWS_FILE_PATH);
             } else {
                 standardJMeterEngine = JMeterUtil.init(JMeterUtil.LINUX_HOME, JMeterUtil.LINUX_FILE_PATH);
@@ -47,6 +43,7 @@ public class BoundaryTestThread implements Runnable {
             standardJMeterEngine.configure(testPlanTree);
             standardJMeterEngine.run();
             testPlanVO.setStatus("Completed");
+            pressureMeasurementMapper.updateTestPlan(testPlanVO);
         } catch (IOException e) {
             e.printStackTrace();
         }

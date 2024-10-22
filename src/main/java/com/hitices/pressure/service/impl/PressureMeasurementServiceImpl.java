@@ -6,9 +6,9 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.baomidou.mybatisplus.core.toolkit.ObjectUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hitices.pressure.common.BoundaryTestThread;
-import com.hitices.pressure.common.MResponse;
 import com.hitices.pressure.common.MeasureThread;
-import com.hitices.pressure.entity.*;
+import com.hitices.pressure.domain.entity.TimerType;
+import com.hitices.pressure.domain.vo.*;
 import com.hitices.pressure.repository.PressureMeasurementMapper;
 import com.hitices.pressure.service.PressureMeasurementService;
 import com.hitices.pressure.utils.JMeterUtil;
@@ -16,11 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
-import org.apache.jmeter.engine.StandardJMeterEngine;
 import org.apache.jmeter.samplers.SampleResult;
-import org.apache.jmeter.save.SaveService;
-import org.apache.jmeter.util.JMeterUtils;
-import org.apache.jorphan.collections.HashTree;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -48,11 +44,11 @@ public class PressureMeasurementServiceImpl implements PressureMeasurementServic
   @Override
   public boolean commonMeasure(TestPlanVO testPlanVO) {
     try {
+      testPlanVO.setStatus("Running");
+      pressureMeasurementMapper.updateTestPlan(testPlanVO);
       MeasureThread measureThread = new MeasureThread(testPlanVO, this,pressureMeasurementMapper);
       Thread thread = new Thread(measureThread);
       thread.start();
-      testPlanVO.setStatus("Running");
-      pressureMeasurementMapper.updateTestPlan(testPlanVO);
       return true;
     } catch (Exception e) {
       return false;
@@ -68,10 +64,10 @@ public class PressureMeasurementServiceImpl implements PressureMeasurementServic
   public CompletableFuture<Boolean> commonMeasureFuture(TestPlanVO testPlanVO) {
     return CompletableFuture.supplyAsync(() -> {
       try {
-        MeasureThread measureThread = new MeasureThread(testPlanVO, this,pressureMeasurementMapper);
-        measureThread.run();
         testPlanVO.setStatus("Running");
         pressureMeasurementMapper.updateTestPlan(testPlanVO);
+        MeasureThread measureThread = new MeasureThread(testPlanVO, this,pressureMeasurementMapper);
+        measureThread.run();
         return true;
       } catch (Exception e) {
         //todo dubug
@@ -86,17 +82,21 @@ public class PressureMeasurementServiceImpl implements PressureMeasurementServic
   public boolean boundaryMeasure(TestPlanVO testPlanVO) {
     Path path = Paths.get(JMeterUtil.JMX_PATH);
     Path jmxPath = path.resolve(testPlanVO.getId() + ".jmx");
+    //这里会直接return false
     if (!Files.exists(path) || !Files.exists(jmxPath)) {
       return false;
     }
     try {
-        BoundaryTestThread boundaryTestThread = new BoundaryTestThread(testPlanVO, jmxPath.toString());
+      testPlanVO.setStatus("Running");
+      pressureMeasurementMapper.updateTestPlan(testPlanVO);
+        BoundaryTestThread boundaryTestThread = new BoundaryTestThread(testPlanVO, jmxPath.toString(),pressureMeasurementMapper);
         Thread thread = new Thread(boundaryTestThread);
         thread.start();
-        testPlanVO.setStatus("Running");
-        pressureMeasurementMapper.updateTestPlan(testPlanVO);
+
         return true;
     } catch (Exception e) {
+      testPlanVO.setStatus("Failed");
+      pressureMeasurementMapper.updateTestPlan(testPlanVO);
         return false;
     }
     /*
@@ -129,10 +129,10 @@ public class PressureMeasurementServiceImpl implements PressureMeasurementServic
         return false;
       }
       try {
-        BoundaryTestThread boundaryTestThread = new BoundaryTestThread(testPlanVO, jmxPath.toString());
-        boundaryTestThread.run();
         testPlanVO.setStatus("Running");
         pressureMeasurementMapper.updateTestPlan(testPlanVO);
+        BoundaryTestThread boundaryTestThread = new BoundaryTestThread(testPlanVO, jmxPath.toString(),pressureMeasurementMapper);
+        boundaryTestThread.run();
         return true;
       } catch (Exception e) {
         return false;
