@@ -609,6 +609,7 @@ public class PressureMeasurementServiceImpl implements PressureMeasurementServic
     BeanUtils.copyProperties(aggregateReport,result);
     result.setNamespace(testPlan.getNamespace());
     result.setPodName(testPlan.getPodName());
+    result.setName(testPlan.getTestPlanName());
     return result;
   }
 

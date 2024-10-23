@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.hitices.pressure.domain.entity.JointPlan;
 import com.hitices.pressure.domain.entity.JointPlanMap;
 import com.hitices.pressure.domain.vo.JointPlanVO;
+import com.hitices.pressure.domain.vo.TestPlanVO;
 
 import java.util.List;
 
@@ -34,4 +35,11 @@ public interface JointPlanService extends IService<JointPlan> {
      * @param status
      */
     boolean updateJointPlanStatus(Integer jointPlanId, String status);
+
+    List<JointPlanVO> getJointTestPlans();
+
+    JointPlanVO getJointTestPlanById(int jointPlanId);
+
+    List<TestPlanVO> getJointTestPlanSonById(int jointPlanId);
+
 }

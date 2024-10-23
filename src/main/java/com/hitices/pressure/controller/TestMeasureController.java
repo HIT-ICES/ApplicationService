@@ -1,7 +1,10 @@
 package com.hitices.pressure.controller;
 
 import com.hitices.pressure.common.MResponse;
+import org.apache.commons.lang3.RandomUtils;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Random;
 
 @CrossOrigin
 @RestController
@@ -18,7 +21,7 @@ public class TestMeasureController {
     public MResponse<String> getSystem() {
 //        System.out.println("Received");
         try {
-            Thread.sleep(1000);
+            Thread.sleep(new Random().nextInt(401) + 100);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }

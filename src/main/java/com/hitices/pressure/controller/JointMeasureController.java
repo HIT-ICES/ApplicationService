@@ -3,13 +3,16 @@ package com.hitices.pressure.controller;
 
 import com.baomidou.mybatisplus.core.toolkit.ObjectUtils;
 import com.hitices.pressure.common.MResponse;
+import com.hitices.pressure.domain.entity.JointPlan;
 import com.hitices.pressure.domain.entity.JointPlanMap;
 import com.hitices.pressure.domain.vo.AggregateReportEnhanceVO;
 import com.hitices.pressure.domain.vo.JointPlanVO;
+import com.hitices.pressure.domain.vo.TestPlanVO;
 import com.hitices.pressure.service.JointPlanService;
 import com.hitices.pressure.service.PressureMeasurementService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -59,7 +62,7 @@ public class JointMeasureController {
      * @param
      * @return
      */
-    @PostMapping("/measurePlans")
+    @GetMapping("/measurePlans")
     public MResponse<Boolean> measurePlans(@RequestParam("jointPlanId") Integer jointPlanId) {
         List<JointPlanMap> maps = jointPlanService.getPlanByJointPlanId(jointPlanId);
         AtomicBoolean isFailed = new AtomicBoolean(false);
@@ -126,6 +129,39 @@ public class JointMeasureController {
         if(reports.size() <= 0) return new MResponse<List<AggregateReportEnhanceVO>>().failedMResponse().data(null).set("msg","未查询到聚合报告，请先创建!");
         return new MResponse<List<AggregateReportEnhanceVO>>().successMResponse().data(reports);
     }
+
+
+    /**
+     * 获取所有的联合计划
+     * @return
+     */
+    @GetMapping("/getJointTestPlans")
+    public MResponse<List<JointPlanVO>> getJointTestPlans(){
+        List<JointPlanVO> result = jointPlanService.getJointTestPlans();
+        if(ObjectUtils.isNull(result) || ObjectUtils.isEmpty(result)){
+            return new MResponse<List<JointPlanVO>>().failedMResponse().set("msg","查询失败");
+        }
+        return new MResponse<List<JointPlanVO>>().successMResponse().data(result);
+    }
+
+    @GetMapping("/getJointTestPlanById")
+    public MResponse<JointPlanVO> getJointTestPlanById(int jointPlanId){
+        JointPlanVO result = jointPlanService.getJointTestPlanById(jointPlanId);
+        if(ObjectUtils.isNull(result) || ObjectUtils.isEmpty(result)){
+            return new MResponse<JointPlanVO>().failedMResponse().set("msg","查询失败");
+        }
+        return new MResponse<JointPlanVO>().successMResponse().data(result);
+    }
+
+    @GetMapping("/getJointTestPlanSonById")
+    public MResponse<List<TestPlanVO>> getJointTestPlanSonById(int jointPlanId){
+        List<TestPlanVO> result = jointPlanService.getJointTestPlanSonById(jointPlanId);
+        if(ObjectUtils.isNull(result) || ObjectUtils.isEmpty(result)){
+            return new MResponse<List<TestPlanVO>>().failedMResponse().set("msg","查询失败");
+        }
+        return new MResponse<List<TestPlanVO>>().successMResponse().data(result);
+    }
+
 
 
 }

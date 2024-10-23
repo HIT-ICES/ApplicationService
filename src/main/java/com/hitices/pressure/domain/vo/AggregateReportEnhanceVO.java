@@ -10,4 +10,6 @@ public class AggregateReportEnhanceVO extends AggregateReportVO{
     String namespace;
 
     String podName;
+
+    String name;
 }

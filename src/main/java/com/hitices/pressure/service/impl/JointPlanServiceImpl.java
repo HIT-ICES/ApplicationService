@@ -11,11 +11,14 @@ import com.hitices.pressure.repository.JointPlanMapMapper;
 import com.hitices.pressure.repository.JointPlanMapper;
 import com.hitices.pressure.repository.PressureMeasurementMapper;
 import com.hitices.pressure.service.JointPlanService;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
 * @author 24957
@@ -89,6 +92,74 @@ public class JointPlanServiceImpl extends ServiceImpl<JointPlanMapper, JointPlan
             throw new RuntimeException("更新联合任务状态失败!");
         }
         return true;
+    }
+
+    @Override
+    public List<JointPlanVO> getJointTestPlans() {
+        List<JointPlan> jointTestPlans = this.baseMapper.selectList(null);
+        List<JointPlanVO> result = jointTestPlans.stream().map(jointPlan -> {
+            JointPlanVO jointPlanVO = new JointPlanVO();
+            BeanUtils.copyProperties(jointPlan, jointPlanVO);
+            jointPlanVO.setName(jointPlan.getJointPlanName());
+            LambdaQueryWrapper<JointPlanMap> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(JointPlanMap::getJointPlanId, jointPlan.getId());
+            List<JointPlanMap> jointPlanMaps = jointPlanMapMapper.selectList(wrapper);
+            //获取该jointPlan的所有子查询计划的Id
+            List<String> collect = jointPlanMaps.stream().map(jointPlanMap -> {
+                Integer planId = jointPlanMap.getPlanId();
+                TestPlanVO testPlanById = pressureMeasurementMapper.getTestPlanById(planId);
+                return testPlanById.getTestPlanName();
+            }).collect(Collectors.toList());
+
+            List<Integer> collect1 = jointPlanMaps.stream().map(jointPlanMap -> {
+                return jointPlanMap.getPlanId();
+            }).collect(Collectors.toList());
+
+            jointPlanVO.setTestPlansName(collect);
+            jointPlanVO.setTestPlanIds(collect1);
+            return jointPlanVO;
+        }).collect(Collectors.toList());
+        return result;
+    }
+
+    @Override
+    public JointPlanVO getJointTestPlanById(int jointPlanId) {
+        JointPlan jointPlan = this.baseMapper.selectById(jointPlanId);
+        JointPlanVO result = new JointPlanVO();
+        BeanUtils.copyProperties(jointPlan,result);
+        result.setName(jointPlan.getJointPlanName());
+        //设置子计划
+        LambdaQueryWrapper<JointPlanMap> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(JointPlanMap::getJointPlanId, jointPlan.getId());
+        List<JointPlanMap> jointPlanMaps = jointPlanMapMapper.selectList(wrapper);
+
+        List<String> collect = jointPlanMaps.stream().map(jointPlanMap -> {
+            Integer planId = jointPlanMap.getPlanId();
+            TestPlanVO testPlanById = pressureMeasurementMapper.getTestPlanById(planId);
+            return testPlanById.getTestPlanName();
+        }).collect(Collectors.toList());
+
+        List<Integer> collect1 = jointPlanMaps.stream().map(jointPlanMap -> {
+            return jointPlanMap.getPlanId();
+        }).collect(Collectors.toList());
+
+        result.setTestPlansName(collect);
+        result.setTestPlanIds(collect1);
+        return result;
+
+    }
+
+    @Override
+    public List<TestPlanVO> getJointTestPlanSonById(int jointPlanId) {
+        //先找到jointPlan所有映射到的子plan id
+        LambdaQueryWrapper<JointPlanMap> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(JointPlanMap::getJointPlanId, jointPlanId);
+        List<JointPlanMap> jointPlanMaps = jointPlanMapMapper.selectList(wrapper);
+        List<TestPlanVO> collect = jointPlanMaps.stream().map(jointPlanMap -> {
+            Integer planId = jointPlanMap.getPlanId();
+            return pressureMeasurementMapper.getTestPlanById(planId);
+        }).collect(Collectors.toList());
+        return collect;
     }
 }
 
