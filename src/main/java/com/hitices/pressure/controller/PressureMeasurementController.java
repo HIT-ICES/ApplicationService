@@ -119,31 +119,18 @@ public class PressureMeasurementController {
   }
 
   /**
-   * 创建测试计划的整体聚合报告
+   * 创建测试计划的整体聚合报告以及各个线程组的报告
    * @param planId
    * @return
    */
   @GetMapping("/createAggregateReport")
   public MResponse<Object> createAggregateReport(int planId) {
-    if (pressureMeasurementService.addAggregateReport(planId)) {
+    if (pressureMeasurementService.addAggregateReport(planId) && pressureMeasurementService.addAggregateGroupReport(planId)) {
       return new MResponse<>().successMResponse();
     }
     return new MResponse<>().failedMResponse();
   }
 
-
-  /**
-   * 为某个测试计划下的每个线程组各自创建一份聚合报告
-   * @param planId
-   * @return
-   */
-  @GetMapping("/createAggregateGroupReport")
-  public MResponse<Object> createAggregateGroupReport(int planId) {
-    if (pressureMeasurementService.addAggregateGroupReport(planId)) {
-      return new MResponse<>().successMResponse();
-    }
-    return new MResponse<>().failedMResponse();
-  }
 
   @GetMapping("/getTestResultsByID")
   public MResponse<List<TestResultVO>> getTestResultsById(int testPlanId) {

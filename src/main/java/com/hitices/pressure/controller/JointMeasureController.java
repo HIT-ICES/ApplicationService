@@ -6,6 +6,7 @@ import com.hitices.pressure.common.MResponse;
 import com.hitices.pressure.domain.entity.JointPlan;
 import com.hitices.pressure.domain.entity.JointPlanMap;
 import com.hitices.pressure.domain.vo.AggregateReportEnhanceVO;
+import com.hitices.pressure.domain.vo.AggregateReportVO;
 import com.hitices.pressure.domain.vo.JointPlanVO;
 import com.hitices.pressure.domain.vo.TestPlanVO;
 import com.hitices.pressure.service.JointPlanService;
@@ -103,8 +104,13 @@ public class JointMeasureController {
             return new MResponse<Boolean>().failedMResponse().set("msg","此Id不存在!").data(false);
         }
         for (JointPlanMap map : planByJointPlanId) {
-            boolean b = pressureMeasurementService.addAggregateReport(map.getPlanId());
-            if(!b) throw new RuntimeException("Id:"+map.getPlanId()+"  创建聚合报告失败");
+            //先检查是否已经创建了报告
+            AggregateReportVO report = pressureMeasurementService.getAggregateReportByPlanId(map.getPlanId());
+            if(ObjectUtils.isNull(report) || ObjectUtils.isEmpty(report)){
+                //如果没有创建再创建
+                boolean b = pressureMeasurementService.addAggregateReport(map.getPlanId());
+                if(!b) throw new RuntimeException("Id:"+map.getPlanId()+"  创建聚合报告失败");
+            }
         }
         return new MResponse<Boolean>().successMResponse().data(true);
     }
