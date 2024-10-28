@@ -48,6 +48,7 @@
     <resultMap id="TestResultMap" type="com.hitices.pressure.domain.vo.TestResultVO">
         <id property="id" column="id"/>
         <result property="planId" column="plan_id"/>
+        <result property="groupId" column="group_id"/>
         <result property="timestamp" column="timestamp"/>
         <result property="startTime" column="start_time"/>
         <result property="endTime" column="end_time"/>
@@ -183,6 +184,11 @@
         from test_result
         where plan_id = #{planId};
     </select>
+    <select id="getTestResultByGroupId" resultMap="TestResultMap">
+        select *
+        from test_result
+        where group_id = #{groupId}
+    </select>
     <select id="getTestResultByResultId" resultMap="TestResultMap">
         select *
         from test_result
@@ -195,7 +201,7 @@
                                      #{functionalMode}, #{tearDown}, #{status}, #{namespace}, #{podName}, #{boundary})
     </insert>
     <insert id="insertTestResult" useGeneratedKeys="true" keyProperty="id" keyColumn="id" parameterType="com.hitices.pressure.domain.vo.TestResultVO">
-        insert into test_result value (null, #{planId}, #{timestamp}, #{startTime}, #{endTime}, #{idleTime}, #{pauseTime}, #{connectTime}, #{latency}, #{success}, #{responseCode}, #{responseData}, #{responseMessage}, #{responseHeaders}, #{bytes}, #{headersSize}, #{bodySize}, #{sentBytes})
+        insert into test_result value (null, #{planId},#{groupId},#{timestamp}, #{startTime}, #{endTime}, #{idleTime}, #{pauseTime}, #{connectTime}, #{latency}, #{success}, #{responseCode}, #{responseData}, #{responseMessage}, #{responseHeaders}, #{bytes}, #{headersSize}, #{bodySize}, #{sentBytes})
     </insert>
     <insert id="insertThreadGroups" useGeneratedKeys="true" keyProperty="id">
         insert into thread_group values

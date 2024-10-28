@@ -43,7 +43,7 @@ public interface PressureMeasurementService {
 
     void updateTestPlan(TestPlanVO testPlanVO);
 
-    int updateAggregateReport(int planId);
+    boolean updateAggregateReport(int planId);
 
     void addTimers(List<TimerVO> timers, int threadGroupId);
 
@@ -52,6 +52,8 @@ public interface PressureMeasurementService {
     boolean addAggregateReport(int planId);
 
     boolean addAggregateReport(AggregateReportVO aggregateReportVO);
+
+    boolean addAggregateGroupReport(int planId);
 
     List<TestResultVO> getTestResultsByPlanId(int planId);
 
@@ -62,4 +64,6 @@ public interface PressureMeasurementService {
     List<AggregateReportVO> getBoundaryTestResult(int planId);
 
     AggregateReportEnhanceVO getAggregateReportEnhanceByPlanId(Integer planId);
+
+
 }

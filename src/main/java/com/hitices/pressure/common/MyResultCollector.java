@@ -13,14 +13,16 @@ public class MyResultCollector extends ResultCollector {
 
     private PressureMeasurementService pressureMeasurementService;
     private int planId;
+    private int groupId;
 
     public MyResultCollector(){
         super();
     }
 
-    public MyResultCollector(Summariser summariser, int planId){
+    public MyResultCollector(Summariser summariser, int planId,int groupId){
         super(summariser);
         this.planId = planId;
+        this.groupId = groupId;
     }
 
     public void setPressureMeasurementService(PressureMeasurementService pressureMeasurementService){
@@ -33,6 +35,7 @@ public class MyResultCollector extends ResultCollector {
         SampleResult result = event.getResult();
         TestResultVO testResultVO = new TestResultVO(0,
                 planId,
+                groupId,
                 new Date(result.getTimeStamp()),
                 new Date(result.getStartTime()),
                 new Date(result.getEndTime()),

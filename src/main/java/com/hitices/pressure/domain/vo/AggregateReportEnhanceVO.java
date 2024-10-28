@@ -7,6 +7,10 @@ import lombok.EqualsAndHashCode;
 @Data
 public class AggregateReportEnhanceVO extends AggregateReportVO{
 
+    int groupId;
+
+    String groupName;
+
     String namespace;
 
     String podName;

@@ -5,9 +5,11 @@ import com.hitices.pressure.common.MResponse;
 import com.hitices.pressure.domain.entity.HardwareRecord;
 import com.hitices.pressure.domain.entity.MonitorParam;
 import com.hitices.pressure.domain.entity.NetworkRecord;
+import com.hitices.pressure.domain.vo.AggregateReportEnhanceVO;
 import com.hitices.pressure.domain.vo.AggregateReportVO;
 import com.hitices.pressure.domain.vo.TestPlanVO;
 import com.hitices.pressure.domain.vo.TestResultVO;
+import com.hitices.pressure.service.AggregateGroupReportService;
 import com.hitices.pressure.service.PressureMeasurementService;
 import com.hitices.pressure.utils.ExcelGenerator;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +32,12 @@ public class PressureMeasurementController {
 
   @Autowired private PressureMeasurementService pressureMeasurementService;
 
+  @Autowired private AggregateGroupReportService aggregateGroupReportService;
+
+  /**
+   * 获取所有的测试计划
+   * @return
+   */
   @GetMapping("/testPlans")
   public MResponse<List<TestPlanVO>> getAllTestPlans() {
     try {
@@ -52,6 +60,11 @@ public class PressureMeasurementController {
     }
   }
 
+  /**
+   * 执行测试计划
+   * @param testPlanId
+   * @return
+   */
   @GetMapping("/measure")
   public MResponse<Boolean> measure(@RequestParam("testPlanId") int testPlanId) {
     try {
@@ -92,17 +105,41 @@ public class PressureMeasurementController {
     return new MResponse<>().successMResponse();
   }
 
+  /**
+   * 更新总体的聚合报告，以及各个线程组的聚合报告
+   * @param planId
+   * @return
+   */
   @GetMapping("/updateAggregateReport")
   public MResponse<Object> updateAggregateReport(int planId) {
-    if (pressureMeasurementService.updateAggregateReport(planId) <= 0) {
+    if (!pressureMeasurementService.updateAggregateReport(planId)) {
       return new MResponse<>().failedMResponse();
     }
     return new MResponse<>().successMResponse();
   }
 
+  /**
+   * 创建测试计划的整体聚合报告
+   * @param planId
+   * @return
+   */
   @GetMapping("/createAggregateReport")
   public MResponse<Object> createAggregateReport(int planId) {
     if (pressureMeasurementService.addAggregateReport(planId)) {
+      return new MResponse<>().successMResponse();
+    }
+    return new MResponse<>().failedMResponse();
+  }
+
+
+  /**
+   * 为某个测试计划下的每个线程组各自创建一份聚合报告
+   * @param planId
+   * @return
+   */
+  @GetMapping("/createAggregateGroupReport")
+  public MResponse<Object> createAggregateGroupReport(int planId) {
+    if (pressureMeasurementService.addAggregateGroupReport(planId)) {
       return new MResponse<>().successMResponse();
     }
     return new MResponse<>().failedMResponse();
@@ -115,6 +152,7 @@ public class PressureMeasurementController {
         .data(pressureMeasurementService.getTestResultsByPlanId(testPlanId));
   }
 
+
   @GetMapping("/getTestResultByResultId")
   public MResponse<TestResultVO> getTestResultByResultId(int testResultId) {
     return new MResponse<TestResultVO>()
@@ -122,12 +160,28 @@ public class PressureMeasurementController {
         .data(pressureMeasurementService.getTestResultByResultId(testResultId));
   }
 
+
+  /**
+   * 获取某个测试计划下面的所有线程组的聚合报告
+   * @param planId
+   * @return
+   */
+  @GetMapping("/getAggregateGroupReportByPlanId")
+  public MResponse<List<AggregateReportEnhanceVO>> getAggregateGroupReportByPlanId(int planId) {
+    return new MResponse<List<AggregateReportEnhanceVO>>()
+        .successMResponse()
+        .data(aggregateGroupReportService.getAggregateGroupReportByPlanId(planId));
+  }
+
+
   @GetMapping("/getAggregateReportByPlanId")
   public MResponse<AggregateReportVO> getAggregateReportByPlanId(int planId) {
     return new MResponse<AggregateReportVO>()
-        .successMResponse()
-        .data(pressureMeasurementService.getAggregateReportByPlanId(planId));
+            .successMResponse()
+            .data(pressureMeasurementService.getAggregateReportByPlanId(planId));
   }
+
+
 
   @GetMapping("/getStartAndEndOfTest")
   public MResponse<int[]> getStartAndEndOfTest(int planId) {
@@ -140,6 +194,7 @@ public class PressureMeasurementController {
     }
     return new MResponse<int[]>().successMResponse().data(startAndEnd);
   }
+
 
   @PostMapping("/aggregateReportExcel")
   public ResponseEntity<InputStreamResource> generateExcel(

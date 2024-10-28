@@ -1,18 +1,22 @@
 package com.hitices.pressure.service.impl;
 
 import com.alibaba.fastjson.JSON;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.baomidou.mybatisplus.core.toolkit.ObjectUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hitices.pressure.common.BoundaryTestThread;
 import com.hitices.pressure.common.MeasureThread;
+import com.hitices.pressure.domain.entity.AggregateGroupReport;
 import com.hitices.pressure.domain.enum_.TimerType;
 import com.hitices.pressure.domain.vo.*;
+import com.hitices.pressure.repository.AggregateGroupReportMapper;
 import com.hitices.pressure.repository.PressureMeasurementMapper;
 import com.hitices.pressure.service.PressureMeasurementService;
 import com.hitices.pressure.utils.JMeterUtil;
 import lombok.extern.slf4j.Slf4j;
+import opennlp.tools.ml.BeamSearch;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
@@ -41,6 +45,9 @@ public class PressureMeasurementServiceImpl implements PressureMeasurementServic
 
   @Autowired
   private PressureMeasurementMapper pressureMeasurementMapper;
+
+  @Autowired
+  private AggregateGroupReportMapper aggregateGroupReportMapper;
 
   @Override
   public boolean commonMeasure(TestPlanVO testPlanVO) {
@@ -304,6 +311,65 @@ public class PressureMeasurementServiceImpl implements PressureMeasurementServic
     return null;
   }
 
+  //针对每个线程组都创建一份聚合报告
+  public AggregateGroupReport calculateGroupReport(int planId,int groupId,String groupName) {
+    class LatencyComparator implements Comparator<TestResultVO> {
+      @Override
+      public int compare(TestResultVO r1, TestResultVO r2) {
+        return (int) (r1.getLatency() - r2.getLatency());
+      }
+    }
+    class StartTimeComparator implements Comparator<TestResultVO> {
+      @Override
+      public int compare(TestResultVO r1, TestResultVO r2) {
+        return r2.getTimestamp().compareTo(r1.getTimestamp());
+      }
+    }
+    AggregateGroupReport aggregateReportVO = new AggregateGroupReport();
+    //拿到单个thread group的测试结果
+    List<TestResultVO> resultList = pressureMeasurementMapper.getTestResultByGroupId(groupId);
+    int samplesNum = resultList.size();
+    if (samplesNum > 0) {
+      Collections.sort(resultList, new LatencyComparator());
+      double min = resultList.get(0).getLatency();
+      double max = resultList.get(samplesNum - 1).getLatency();
+      double sum =
+              resultList.stream()
+                      .reduce(0f, (result, item) -> result + item.getLatency(), (i1, i2) -> i1 + i2);
+      int errorNum =
+              resultList.stream()
+                      .reduce(
+                              0, (result, item) -> result + (item.isSuccess() ? 0 : 1), (i1, i2) -> i1 + i2);
+      double median = calculateMedian(resultList);
+      double p90 = calculatePercentile(resultList, 50);
+      double p95 = calculatePercentile(resultList, 95);
+      double p99 = calculatePercentile(resultList, 99);
+      aggregateReportVO.setSamplesNum(samplesNum);
+      aggregateReportVO.setAverage(sum / samplesNum);
+      aggregateReportVO.setErrorRate( errorNum / (double)samplesNum);
+      aggregateReportVO.setMax(max);
+      aggregateReportVO.setMin(min);
+      aggregateReportVO.setMedian(median);
+      aggregateReportVO.setP90(p90);
+      aggregateReportVO.setP95(p95);
+      aggregateReportVO.setP99(p99);
+      aggregateReportVO.setPlanId(planId);
+      aggregateReportVO.setGroupId(groupId);
+      aggregateReportVO.setThreadGroupName(groupName);
+      Collections.sort(resultList, new StartTimeComparator());
+      double sec =
+              (resultList.get(0).getTimestamp().getTime()
+                      - resultList.get(samplesNum - 1).getTimestamp().getTime())
+                      / 1000;
+      if (Double.compare(sec, 1.0) < 0) {
+        sec = 1;
+      }
+      aggregateReportVO.setTps(samplesNum / sec);
+      return aggregateReportVO;
+    }
+    return null;
+  }
+
   @Override
   public boolean addAggregateReport(int planId) {
     AggregateReportVO aggregateReportVO = calculateReport(planId);
@@ -334,9 +400,47 @@ public class PressureMeasurementServiceImpl implements PressureMeasurementServic
   }
 
   @Override
-  public int updateAggregateReport(int planId) {
+  public boolean addAggregateGroupReport(int planId) {
+    //该测试计划下的所有线程组
+    List<ThreadGroupVO> groups = pressureMeasurementMapper.getThreadGroupsByTestPlanId(planId);
+    try {
+      for (ThreadGroupVO group : groups) {
+        AggregateGroupReport aggregateReportVO = calculateGroupReport(planId,group.getId(),group.getThreadGroupName());
+        //检查是否已经创建过聚合报告，只能创建一份聚合报告
+        LambdaQueryWrapper<AggregateGroupReport> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(AggregateGroupReport::getGroupId,group.getId());
+        AggregateGroupReport aggregateGroupReport = aggregateGroupReportMapper.selectOne(wrapper);
+        if(ObjectUtils.isNotNull(aggregateGroupReport) || ObjectUtils.isNotEmpty(aggregateGroupReport)){
+          return false;
+        }
+        int res = aggregateGroupReportMapper.insert(aggregateReportVO);
+        if (res <= 0) {
+          return false;
+        }
+      }
+      return true;
+    } catch (Exception e) {
+      e.printStackTrace();
+      return false;
+    }
+  }
+
+  @Override
+  public boolean updateAggregateReport(int planId) {
+    //更新测试计划的整体聚合报告
     AggregateReportVO aggregateReportVO = calculateReport(planId);
-    return pressureMeasurementMapper.updateAggregateReport(aggregateReportVO);
+    if(pressureMeasurementMapper.updateAggregateReport(aggregateReportVO) <= 0){
+      return false;
+    }
+    //更新每个线程组的聚合报告
+    List<ThreadGroupVO> threadGroupsByTestPlanId = pressureMeasurementMapper.getThreadGroupsByTestPlanId(planId);
+    for (ThreadGroupVO groupVO : threadGroupsByTestPlanId) {
+      AggregateGroupReport reportEnhanceVO = calculateGroupReport(planId, groupVO.getId(), groupVO.getThreadGroupName());
+      LambdaQueryWrapper<AggregateGroupReport> wrapper = new LambdaQueryWrapper<>();
+      wrapper.eq(AggregateGroupReport::getGroupId,groupVO.getId());
+      if(aggregateGroupReportMapper.update(reportEnhanceVO,wrapper) <= 0) return false;
+    }
+    return true;
   }
 
   public List<TimerVO> getTimersByThreadGroupId(int threadGroupId) {

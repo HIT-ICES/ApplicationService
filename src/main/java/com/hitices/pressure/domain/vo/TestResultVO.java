@@ -10,6 +10,7 @@ import java.util.Date;
 public class TestResultVO {
     private int id;
     private int planId;
+    private int groupId;
     private Date timestamp;
     private Date startTime;
     private Date endTime;
