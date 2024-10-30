@@ -186,15 +186,19 @@ public class PressureMeasurementController {
   @PostMapping("/aggregateReportExcel")
   public ResponseEntity<InputStreamResource> generateExcel(
       @RequestParam int planId, @RequestBody MonitorParam monitorParam) throws IOException {
+    //整个测试计划的聚合报告
     AggregateReportVO aggregateReportVO =
         pressureMeasurementService.getAggregateReportByPlanId(planId);
+    //每个线程组的聚合报告
+    List<AggregateReportEnhanceVO> aggregateGroupReport =
+            aggregateGroupReportService.getAggregateGroupReportByPlanId((planId));
     ArrayList<HardwareRecord> cpuUsage = monitorParam.getCpuUsage();
     ArrayList<HardwareRecord> memoryUsage = monitorParam.getMemoryUsage();
     ArrayList<NetworkRecord> byteTransmitted = monitorParam.getByteTransmitted();
     ArrayList<NetworkRecord> byteReceived = monitorParam.getByteReceived();
     InputStream inputStream =
         ExcelGenerator.generateAggregateReportExcel(
-            aggregateReportVO, cpuUsage, memoryUsage, byteTransmitted, byteReceived);
+            aggregateReportVO, aggregateGroupReport,cpuUsage, memoryUsage, byteTransmitted, byteReceived);
 
     if (inputStream != null) {
       InputStreamResource resource = new InputStreamResource(inputStream);

@@ -40,6 +40,7 @@ public class AggregateGroupReportServiceImpl extends ServiceImpl<AggregateGroupR
             AggregateReportEnhanceVO reportEnhance = new AggregateReportEnhanceVO();
             reportEnhance.setGroupId(report.getGroupId());
             reportEnhance.setGroupName(report.getThreadGroupName());
+            reportEnhance.setSamplesNum(report.getSamplesNum());
             BeanUtils.copyProperties(report,reportEnhance);
             result.add(reportEnhance);
         }
