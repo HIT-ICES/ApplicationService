@@ -1,7 +1,9 @@
 package com.hitices.pressure.utils;
-import com.hitices.pressure.entity.AggregateReportVO;
-import com.hitices.pressure.entity.HardwareRecord;
-import com.hitices.pressure.entity.NetworkRecord;
+import com.hitices.pressure.domain.entity.AggregateGroupReport;
+import com.hitices.pressure.domain.vo.AggregateReportEnhanceVO;
+import com.hitices.pressure.domain.vo.AggregateReportVO;
+import com.hitices.pressure.domain.entity.HardwareRecord;
+import com.hitices.pressure.domain.entity.NetworkRecord;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.*;
 
@@ -82,61 +84,147 @@ public class ExcelGenerator {
 
     }
 
-    public static InputStream generateAggregateReportExcel(AggregateReportVO aggregateReportVO, ArrayList<HardwareRecord> cpuUsage, ArrayList<HardwareRecord> memoryUsage, ArrayList<NetworkRecord> byteTransmitted, ArrayList<NetworkRecord> byteReceived) throws IOException {
+    public static InputStream generateAggregateReportExcel(AggregateReportVO aggregateReportVO, List<AggregateReportEnhanceVO> aggregateGroupReport , ArrayList<HardwareRecord> cpuUsage, ArrayList<HardwareRecord> memoryUsage, ArrayList<NetworkRecord> byteTransmitted, ArrayList<NetworkRecord> byteReceived) throws IOException {
         // 创建工作簿
         Workbook workbook = new HSSFWorkbook();
         // 创建工作表
         Sheet arSheet = workbook.createSheet("Aggregate Report");
         // 创建行
-        Row labelRow = arSheet.createRow(0);
-        Row valueRow = arSheet.createRow(1);
+        Row title1Row = arSheet.createRow(0);
+        Row labelRow = arSheet.createRow(1);
+        Row valueRow = arSheet.createRow(2);
+        Row title2Row = arSheet.createRow(4);
+
+        Cell cell0 = title1Row.createCell(0);
+        cell0.setCellValue("聚合报告");
+        Cell cell4 = title2Row.createCell(0);
+        cell4.setCellValue("线程组聚合报告");
 
         // 创建单元格
-        Cell cell11 = labelRow.createCell(0);
+        Cell cell10 = labelRow.createCell(0);
+        cell10.setCellValue("Label");
+        Cell cell20 = valueRow.createCell(0);
+        cell20.setCellValue("Total");
+
+        Cell cell11 = labelRow.createCell(1);
         cell11.setCellValue("# Samples");
-        Cell cell21 = valueRow.createCell(0);
+        Cell cell21 = valueRow.createCell(1);
         cell21.setCellValue(aggregateReportVO.getSamplesNum());
 
-        Cell cell12 = labelRow.createCell(1);
+        Cell cell12 = labelRow.createCell(2);
         cell12.setCellValue("Average");
-        Cell cell22 = valueRow.createCell(1);
+        Cell cell22 = valueRow.createCell(2);
         cell22.setCellValue(aggregateReportVO.getAverage());
 
-        Cell cell13 = labelRow.createCell(2);
+        Cell cell13 = labelRow.createCell(3);
         cell13.setCellValue("Median");
-        Cell cell23 = valueRow.createCell(2);
+        Cell cell23 = valueRow.createCell(3);
         cell23.setCellValue(aggregateReportVO.getMedian());
 
-        Cell cell14 = labelRow.createCell(3);
+        Cell cell14 = labelRow.createCell(4);
         cell14.setCellValue("MIN");
-        Cell cell24 = valueRow.createCell(3);
+        Cell cell24 = valueRow.createCell(4);
         cell24.setCellValue(aggregateReportVO.getMin());
 
-        Cell cell15 = labelRow.createCell(4);
+        Cell cell15 = labelRow.createCell(5);
         cell15.setCellValue("MAX");
-        Cell cell25 = valueRow.createCell(4);
+        Cell cell25 = valueRow.createCell(5);
         cell25.setCellValue(aggregateReportVO.getMax());
 
-        Cell cell16 = labelRow.createCell(5);
+        Cell cell16 = labelRow.createCell(6);
         cell16.setCellValue("p90");
-        Cell cell26 = valueRow.createCell(5);
+        Cell cell26 = valueRow.createCell(6);
         cell26.setCellValue(aggregateReportVO.getP90());
 
-        Cell cell17 = labelRow.createCell(6);
+        Cell cell17 = labelRow.createCell(7);
         cell17.setCellValue("P95");
-        Cell cell27 = valueRow.createCell(6);
+        Cell cell27 = valueRow.createCell(7);
         cell27.setCellValue(aggregateReportVO.getP95());
 
-        Cell cell18 = labelRow.createCell(7);
+        Cell cell18 = labelRow.createCell(8);
         cell18.setCellValue("TPS");
-        Cell cell28 = valueRow.createCell(7);
+        Cell cell28 = valueRow.createCell(8);
         cell28.setCellValue(aggregateReportVO.getP99());
 
-        Cell cell19 = labelRow.createCell(8);
+        Cell cell19 = labelRow.createCell(9);
         cell19.setCellValue("Error %");
-        Cell cell29 = valueRow.createCell(8);
+        Cell cell29 = valueRow.createCell(9);
         cell29.setCellValue(aggregateReportVO.getErrorRate());
 
+        //设置title
+        Row labelRow2 =  arSheet.createRow(5);
+        // 创建单元格
+        Cell cell50 = labelRow2.createCell(0);
+        cell50.setCellValue("Label");
+
+        Cell cell51 = labelRow2.createCell(1);
+        cell51.setCellValue("# Samples");
+
+        Cell cell52 = labelRow2.createCell(2);
+        cell52.setCellValue("Average");
+
+
+        Cell cell53 = labelRow2.createCell(3);
+        cell53.setCellValue("Median");
+
+
+        Cell cell54 = labelRow2.createCell(4);
+        cell54.setCellValue("MIN");
+
+
+        Cell cell55 = labelRow2.createCell(5);
+        cell55.setCellValue("MAX");
+
+
+        Cell cell56 = labelRow2.createCell(6);
+        cell56.setCellValue("p90");
+
+
+        Cell cell57 = labelRow2.createCell(7);
+        cell57.setCellValue("P95");
+
+
+        Cell cell58 = labelRow2.createCell(8);
+        cell58.setCellValue("TPS");
+
+
+        Cell cell59 = labelRow2.createCell(9);
+        cell59.setCellValue("Error %");
+
+        for(int i = 0 ; i < aggregateGroupReport.size() ; i++){
+            AggregateReportEnhanceVO groupReport = aggregateGroupReport.get(i);
+            int curRow = 6 + i;
+            Row valueRow2 = arSheet.createRow(curRow);
+            Cell celli0 = valueRow2.createCell(0);
+            celli0.setCellValue(groupReport.getGroupName());
+
+            Cell celli1 = valueRow2.createCell(1);
+            celli1.setCellValue(groupReport.getSamplesNum());
+
+            Cell celli2 = valueRow2.createCell(2);
+            celli2.setCellValue(groupReport.getAverage());
+
+            Cell celli3 = valueRow2.createCell(3);
+            celli3.setCellValue(groupReport.getMedian());
+
+            Cell celli4 = valueRow2.createCell(4);
+            celli4.setCellValue(groupReport.getMin());
+
+            Cell celli5 = valueRow2.createCell(5);
+            celli5.setCellValue(groupReport.getMax());
+
+            Cell celli6 = valueRow2.createCell(6);
+            celli6.setCellValue(groupReport.getP90());
+
+            Cell celli7 = valueRow2.createCell(7);
+            celli7.setCellValue(groupReport.getP95());
+
+            Cell celli8 = valueRow2.createCell(8);
+            celli8.setCellValue(groupReport.getP99());
+
+            Cell celli9 = valueRow2.createCell(9);
+            celli9.setCellValue(groupReport.getErrorRate());
+        }
 
         Sheet cpuSheet = workbook.createSheet("CPU Report");
         Row cpuLabelRow = cpuSheet.createRow(0);
@@ -200,5 +288,7 @@ public class ExcelGenerator {
             workbook.close();
         }
     }
+
+
 }
 

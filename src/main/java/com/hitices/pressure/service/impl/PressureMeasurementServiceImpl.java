@@ -1,24 +1,27 @@
 package com.hitices.pressure.service.impl;
 
 import com.alibaba.fastjson.JSON;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.baomidou.mybatisplus.core.toolkit.ObjectUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hitices.pressure.common.BoundaryTestThread;
-import com.hitices.pressure.common.MResponse;
 import com.hitices.pressure.common.MeasureThread;
-import com.hitices.pressure.entity.*;
+import com.hitices.pressure.domain.entity.AggregateGroupReport;
+import com.hitices.pressure.domain.enum_.TimerType;
+import com.hitices.pressure.domain.vo.*;
+import com.hitices.pressure.repository.AggregateGroupReportMapper;
 import com.hitices.pressure.repository.PressureMeasurementMapper;
 import com.hitices.pressure.service.PressureMeasurementService;
 import com.hitices.pressure.utils.JMeterUtil;
+import lombok.extern.slf4j.Slf4j;
+import opennlp.tools.ml.BeamSearch;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
-import org.apache.jmeter.engine.StandardJMeterEngine;
 import org.apache.jmeter.samplers.SampleResult;
-import org.apache.jmeter.save.SaveService;
-import org.apache.jmeter.util.JMeterUtils;
-import org.apache.jorphan.collections.HashTree;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -29,48 +32,79 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.file.Files;
-import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
+@Slf4j
 @Service
 public class PressureMeasurementServiceImpl implements PressureMeasurementService {
 
   private final List<SampleResult> results = new ArrayList<>();
 
-  @Autowired private PressureMeasurementMapper pressureMeasurementMapper;
+  @Autowired
+  private PressureMeasurementMapper pressureMeasurementMapper;
+
+  @Autowired
+  private AggregateGroupReportMapper aggregateGroupReportMapper;
 
   @Override
   public boolean commonMeasure(TestPlanVO testPlanVO) {
     try {
-      MeasureThread measureThread = new MeasureThread(testPlanVO, this);
-      Thread thread = new Thread(measureThread);
-      thread.start();
       testPlanVO.setStatus("Running");
       pressureMeasurementMapper.updateTestPlan(testPlanVO);
+      MeasureThread measureThread = new MeasureThread(testPlanVO, this,pressureMeasurementMapper);
+      Thread thread = new Thread(measureThread);
+      thread.start();
       return true;
     } catch (Exception e) {
       return false;
     }
   }
 
+  /**
+   * 采用completableFuture改进，便于编排多个任务
+   * @param testPlanVO
+   * @return
+   */
+  @Override
+  public CompletableFuture<Boolean> commonMeasureFuture(TestPlanVO testPlanVO) {
+    return CompletableFuture.supplyAsync(() -> {
+      try {
+        testPlanVO.setStatus("Running");
+        pressureMeasurementMapper.updateTestPlan(testPlanVO);
+        MeasureThread measureThread = new MeasureThread(testPlanVO, this,pressureMeasurementMapper);
+        measureThread.run();
+        return true;
+      } catch (Exception e) {
+        //todo dubug
+        log.error("出现了bug");;
+        e.printStackTrace();
+        return false;
+      }
+    });
+  }
+
   @Override
   public boolean boundaryMeasure(TestPlanVO testPlanVO) {
     Path path = Paths.get(JMeterUtil.JMX_PATH);
     Path jmxPath = path.resolve(testPlanVO.getId() + ".jmx");
+    //这里会直接return false
     if (!Files.exists(path) || !Files.exists(jmxPath)) {
       return false;
     }
     try {
-        BoundaryTestThread boundaryTestThread = new BoundaryTestThread(testPlanVO, jmxPath.toString());
+      testPlanVO.setStatus("Running");
+      pressureMeasurementMapper.updateTestPlan(testPlanVO);
+        BoundaryTestThread boundaryTestThread = new BoundaryTestThread(testPlanVO, jmxPath.toString(),pressureMeasurementMapper);
         Thread thread = new Thread(boundaryTestThread);
         thread.start();
-        testPlanVO.setStatus("Running");
-        pressureMeasurementMapper.updateTestPlan(testPlanVO);
+
         return true;
     } catch (Exception e) {
+      testPlanVO.setStatus("Failed");
+      pressureMeasurementMapper.updateTestPlan(testPlanVO);
         return false;
     }
     /*
@@ -93,6 +127,37 @@ public class PressureMeasurementServiceImpl implements PressureMeasurementServic
     } catch (IOException e) {
       return false;
     }*/
+  }
+  @Override
+  public CompletableFuture<Boolean> boundaryMeasureFuture(TestPlanVO testPlanVO) {
+    return CompletableFuture.supplyAsync(() -> {
+      Path path = Paths.get(JMeterUtil.JMX_PATH);
+      Path jmxPath = path.resolve(testPlanVO.getId() + ".jmx");
+      if (!Files.exists(path) || !Files.exists(jmxPath)) {
+        return false;
+      }
+      try {
+        testPlanVO.setStatus("Running");
+        pressureMeasurementMapper.updateTestPlan(testPlanVO);
+        BoundaryTestThread boundaryTestThread = new BoundaryTestThread(testPlanVO, jmxPath.toString(),pressureMeasurementMapper);
+        boundaryTestThread.run();
+        return true;
+      } catch (Exception e) {
+        return false;
+      }
+    });
+  }
+  @Override
+  public CompletableFuture<Boolean> measureFuture(int testPlanId) {
+    TestPlanVO testPlanVO = null;
+    try {
+      testPlanVO = getTestPlanById(testPlanId);
+    } catch (JsonProcessingException e) {
+      throw new RuntimeException(e);
+    }
+    return testPlanVO.isBoundary()
+            ? boundaryMeasureFuture(testPlanVO)
+            : commonMeasureFuture(testPlanVO);
   }
 
   @Override
@@ -146,6 +211,7 @@ public class PressureMeasurementServiceImpl implements PressureMeasurementServic
     }
     return null;
   }
+
 
   @Override
   public int[] getStartAndEndOfTest(int planId) {
@@ -246,10 +312,74 @@ public class PressureMeasurementServiceImpl implements PressureMeasurementServic
     return null;
   }
 
+  //针对每个线程组都创建一份聚合报告
+  public AggregateGroupReport calculateGroupReport(int planId,int groupId,String groupName) {
+    class LatencyComparator implements Comparator<TestResultVO> {
+      @Override
+      public int compare(TestResultVO r1, TestResultVO r2) {
+        return (int) (r1.getLatency() - r2.getLatency());
+      }
+    }
+    class StartTimeComparator implements Comparator<TestResultVO> {
+      @Override
+      public int compare(TestResultVO r1, TestResultVO r2) {
+        return r2.getTimestamp().compareTo(r1.getTimestamp());
+      }
+    }
+    AggregateGroupReport aggregateReportVO = new AggregateGroupReport();
+    //拿到单个thread group的测试结果
+    List<TestResultVO> resultList = pressureMeasurementMapper.getTestResultByGroupId(groupId);
+    int samplesNum = resultList.size();
+    if (samplesNum > 0) {
+      Collections.sort(resultList, new LatencyComparator());
+      double min = resultList.get(0).getLatency();
+      double max = resultList.get(samplesNum - 1).getLatency();
+      double sum =
+              resultList.stream()
+                      .reduce(0f, (result, item) -> result + item.getLatency(), (i1, i2) -> i1 + i2);
+      int errorNum =
+              resultList.stream()
+                      .reduce(
+                              0, (result, item) -> result + (item.isSuccess() ? 0 : 1), (i1, i2) -> i1 + i2);
+      double median = calculateMedian(resultList);
+      double p90 = calculatePercentile(resultList, 50);
+      double p95 = calculatePercentile(resultList, 95);
+      double p99 = calculatePercentile(resultList, 99);
+      aggregateReportVO.setSamplesNum(samplesNum);
+      aggregateReportVO.setAverage(sum / samplesNum);
+      aggregateReportVO.setErrorRate( errorNum / (double)samplesNum);
+      aggregateReportVO.setMax(max);
+      aggregateReportVO.setMin(min);
+      aggregateReportVO.setMedian(median);
+      aggregateReportVO.setP90(p90);
+      aggregateReportVO.setP95(p95);
+      aggregateReportVO.setP99(p99);
+      aggregateReportVO.setPlanId(planId);
+      aggregateReportVO.setGroupId(groupId);
+      aggregateReportVO.setThreadGroupName(groupName);
+      Collections.sort(resultList, new StartTimeComparator());
+      double sec =
+              (resultList.get(0).getTimestamp().getTime()
+                      - resultList.get(samplesNum - 1).getTimestamp().getTime())
+                      / 1000;
+      if (Double.compare(sec, 1.0) < 0) {
+        sec = 1;
+      }
+      aggregateReportVO.setTps(samplesNum / sec);
+      return aggregateReportVO;
+    }
+    return null;
+  }
+
   @Override
   public boolean addAggregateReport(int planId) {
     AggregateReportVO aggregateReportVO = calculateReport(planId);
     try {
+      AggregateReportVO aggregateReport = pressureMeasurementMapper.getAggregateReport(planId);
+      //检查是否已经创建过聚合报告，只能创建一份聚合报告
+      if(ObjectUtils.isNotNull(aggregateReport) || ObjectUtils.isNotEmpty(aggregateReport)){
+        return false;
+      }
       int res = pressureMeasurementMapper.insertAggregateReport(aggregateReportVO);
       if (res <= 0) {
         return false;
@@ -271,9 +401,47 @@ public class PressureMeasurementServiceImpl implements PressureMeasurementServic
   }
 
   @Override
-  public int updateAggregateReport(int planId) {
+  public boolean addAggregateGroupReport(int planId) {
+    //该测试计划下的所有线程组
+    List<ThreadGroupVO> groups = pressureMeasurementMapper.getThreadGroupsByTestPlanId(planId);
+    try {
+      for (ThreadGroupVO group : groups) {
+        AggregateGroupReport aggregateReportVO = calculateGroupReport(planId,group.getId(),group.getThreadGroupName());
+        //检查是否已经创建过聚合报告，只能创建一份聚合报告
+        LambdaQueryWrapper<AggregateGroupReport> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(AggregateGroupReport::getGroupId,group.getId());
+        AggregateGroupReport aggregateGroupReport = aggregateGroupReportMapper.selectOne(wrapper);
+        if(ObjectUtils.isNotNull(aggregateGroupReport) || ObjectUtils.isNotEmpty(aggregateGroupReport)){
+          return false;
+        }
+        int res = aggregateGroupReportMapper.insert(aggregateReportVO);
+        if (res <= 0) {
+          return false;
+        }
+      }
+      return true;
+    } catch (Exception e) {
+      e.printStackTrace();
+      return false;
+    }
+  }
+
+  @Override
+  public boolean updateAggregateReport(int planId) {
+    //更新测试计划的整体聚合报告
     AggregateReportVO aggregateReportVO = calculateReport(planId);
-    return pressureMeasurementMapper.updateAggregateReport(aggregateReportVO);
+    if(pressureMeasurementMapper.updateAggregateReport(aggregateReportVO) <= 0){
+      return false;
+    }
+    //更新每个线程组的聚合报告
+    List<ThreadGroupVO> threadGroupsByTestPlanId = pressureMeasurementMapper.getThreadGroupsByTestPlanId(planId);
+    for (ThreadGroupVO groupVO : threadGroupsByTestPlanId) {
+      AggregateGroupReport reportEnhanceVO = calculateGroupReport(planId, groupVO.getId(), groupVO.getThreadGroupName());
+      LambdaQueryWrapper<AggregateGroupReport> wrapper = new LambdaQueryWrapper<>();
+      wrapper.eq(AggregateGroupReport::getGroupId,groupVO.getId());
+      if(aggregateGroupReportMapper.update(reportEnhanceVO,wrapper) <= 0) return false;
+    }
+    return true;
   }
 
   public List<TimerVO> getTimersByThreadGroupId(int threadGroupId) {
@@ -537,6 +705,22 @@ public class PressureMeasurementServiceImpl implements PressureMeasurementServic
     return aggregateReportVOList;
   }
 
+  @Override
+  public AggregateReportEnhanceVO getAggregateReportEnhanceByPlanId(Integer planId) {
+    AggregateReportVO aggregateReport = pressureMeasurementMapper.getAggregateReport(planId);
+    TestPlanVO testPlan = pressureMeasurementMapper.getTestPlanById(planId);
+    AggregateReportEnhanceVO result = new AggregateReportEnhanceVO();
+    //将属性进行复制
+    if(ObjectUtils.isNull(aggregateReport) || ObjectUtils.isEmpty(aggregateReport)){
+      return null;
+    }
+    BeanUtils.copyProperties(aggregateReport,result);
+    result.setNamespace(testPlan.getNamespace());
+    result.setPodName(testPlan.getPodName());
+    result.setName(testPlan.getTestPlanName());
+    return result;
+  }
+
 
   @Scheduled(fixedRate = 60000)
   public void batchUpdateStatusForBoundaryTest() {
@@ -549,6 +733,8 @@ public class PressureMeasurementServiceImpl implements PressureMeasurementServic
         plans.add(Integer.valueOf(planId));
       }
     }
-    pressureMeasurementMapper.updatePlanStatus(plans);
+    if(plans.size() != 0) {
+      pressureMeasurementMapper.updatePlanStatus(plans);
+    }
   }
 }

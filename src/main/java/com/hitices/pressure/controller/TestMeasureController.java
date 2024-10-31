@@ -1,15 +1,10 @@
 package com.hitices.pressure.controller;
 
-import com.alibaba.fastjson.JSON;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.hitices.pressure.common.MResponse;
-import com.hitices.pressure.entity.TestPlanVO;
-import com.hitices.pressure.service.PressureMeasurementService;
-import org.apache.jmeter.samplers.SampleResult;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.apache.commons.lang3.RandomUtils;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import java.util.Random;
 
 @CrossOrigin
 @RestController
@@ -25,6 +20,11 @@ public class TestMeasureController {
     @GetMapping("/getSystem")
     public MResponse<String> getSystem() {
 //        System.out.println("Received");
+        try {
+            Thread.sleep(new Random().nextInt(401) + 100);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
         return new MResponse<String>().successMResponse().data(System.getProperty("os.name"));
     }
 }

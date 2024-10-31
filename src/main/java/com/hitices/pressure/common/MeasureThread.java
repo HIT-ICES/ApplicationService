@@ -1,7 +1,8 @@
 package com.hitices.pressure.common;
 
-import com.hitices.pressure.entity.TestPlanVO;
-import com.hitices.pressure.entity.ThreadGroupVO;
+import com.hitices.pressure.domain.vo.TestPlanVO;
+import com.hitices.pressure.domain.vo.ThreadGroupVO;
+import com.hitices.pressure.repository.PressureMeasurementMapper;
 import com.hitices.pressure.service.PressureMeasurementService;
 import com.hitices.pressure.utils.JMeterUtil;
 import org.apache.jmeter.control.LoopController;
@@ -21,16 +22,20 @@ public class MeasureThread implements Runnable {
 
     private final PressureMeasurementService pressureMeasurementService;
 
-    public MeasureThread(TestPlanVO testPlanVO, PressureMeasurementService pressureMeasurementService) {
+    private final PressureMeasurementMapper pressureMeasurementMapper;
+
+    public MeasureThread(TestPlanVO testPlanVO, PressureMeasurementService pressureMeasurementService,PressureMeasurementMapper pressureMeasurementMapper) {
         this.testPlanVO = testPlanVO;
         this.pressureMeasurementService = pressureMeasurementService;
+        this.pressureMeasurementMapper = pressureMeasurementMapper;
         this.system = System.getProperty("os.name");
     }
 
     @Override
     public void run() {
         StandardJMeterEngine standardJMeterEngine;
-        if(this.system.equals("Windows 11")) {
+        //todo 局限性略大
+        if(this.system.equals("Windows 11") || this.system.equals("Windows 10")) {
             standardJMeterEngine = JMeterUtil.init(JMeterUtil.WINDOWS_HOME, JMeterUtil.WINDOWS_FILE_PATH);
         } else {
             standardJMeterEngine = JMeterUtil.init(JMeterUtil.LINUX_HOME, JMeterUtil.LINUX_FILE_PATH);
@@ -58,7 +63,7 @@ public class MeasureThread implements Runnable {
                 //创建http信息头管理器
                 HeaderManager headerManager = JMeterUtil.createHeaderManager(threadGroupVO.getHeaderManagerVO());
 
-                ResultCollector resultCollector = JMeterUtil.createResultCollector(pressureMeasurementService, testPlanVO.getId());
+                ResultCollector resultCollector = JMeterUtil.createResultCollector(pressureMeasurementService, testPlanVO.getId(),threadGroupVO.getId());
 
                 threadGroupTree.add(httpSamplerProxy);
                 threadGroupTree.add(headerManager);
@@ -77,7 +82,7 @@ public class MeasureThread implements Runnable {
             //更新test plan 状态
             //这里的testPlanVo可能存在多线程问题，还没仔细想过，应该没啥事吧
             testPlanVO.setStatus("Completed");
-            pressureMeasurementService.updateTestPlan(testPlanVO);
+            pressureMeasurementMapper.updateTestPlan(testPlanVO);
         }
     }
 }

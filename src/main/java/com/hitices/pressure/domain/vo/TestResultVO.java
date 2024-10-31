@@ -1,9 +1,6 @@
-package com.hitices.pressure.entity;
+package com.hitices.pressure.domain.vo;
 
 import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 import lombok.Data;
 
 import java.util.Date;
@@ -13,6 +10,7 @@ import java.util.Date;
 public class TestResultVO {
     private int id;
     private int planId;
+    private int groupId;
     private Date timestamp;
     private Date startTime;
     private Date endTime;

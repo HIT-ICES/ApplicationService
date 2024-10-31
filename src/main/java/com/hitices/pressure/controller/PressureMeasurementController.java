@@ -1,34 +1,30 @@
 package com.hitices.pressure.controller;
 
-import com.alibaba.fastjson.JSON;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.hitices.pressure.common.MResponse;
-import com.hitices.pressure.entity.*;
+import com.hitices.pressure.domain.entity.HardwareRecord;
+import com.hitices.pressure.domain.entity.MonitorParam;
+import com.hitices.pressure.domain.entity.NetworkRecord;
+import com.hitices.pressure.domain.vo.AggregateReportEnhanceVO;
+import com.hitices.pressure.domain.vo.AggregateReportVO;
+import com.hitices.pressure.domain.vo.TestPlanVO;
+import com.hitices.pressure.domain.vo.TestResultVO;
+import com.hitices.pressure.service.AggregateGroupReportService;
 import com.hitices.pressure.service.PressureMeasurementService;
 import com.hitices.pressure.utils.ExcelGenerator;
-import com.hitices.pressure.utils.JMeterUtil;
-import javafx.beans.binding.DoubleExpression;
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVParser;
-import org.apache.commons.csv.CSVRecord;
-import org.apache.jmeter.samplers.SampleResult;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.core.io.InputStreamResource;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
-import javax.servlet.http.HttpServletResponse;
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
+@Slf4j
 @CrossOrigin
 @RestController
 @RequestMapping("/pressureMeasurement")
@@ -36,6 +32,12 @@ public class PressureMeasurementController {
 
   @Autowired private PressureMeasurementService pressureMeasurementService;
 
+  @Autowired private AggregateGroupReportService aggregateGroupReportService;
+
+  /**
+   * 获取所有的测试计划
+   * @return
+   */
   @GetMapping("/testPlans")
   public MResponse<List<TestPlanVO>> getAllTestPlans() {
     try {
@@ -47,7 +49,7 @@ public class PressureMeasurementController {
     }
   }
 
-  @GetMapping("getTestPlanById")
+  @GetMapping("/getTestPlanById")
   public MResponse<TestPlanVO> getTestPlanById(@RequestParam("testPlanId") int testPlanId) {
     try {
       return new MResponse<TestPlanVO>()
@@ -58,6 +60,11 @@ public class PressureMeasurementController {
     }
   }
 
+  /**
+   * 执行测试计划
+   * @param testPlanId
+   * @return
+   */
   @GetMapping("/measure")
   public MResponse<Boolean> measure(@RequestParam("testPlanId") int testPlanId) {
     try {
@@ -98,21 +105,32 @@ public class PressureMeasurementController {
     return new MResponse<>().successMResponse();
   }
 
+  /**
+   * 更新总体的聚合报告，以及各个线程组的聚合报告
+   * @param planId
+   * @return
+   */
   @GetMapping("/updateAggregateReport")
   public MResponse<Object> updateAggregateReport(int planId) {
-    if (pressureMeasurementService.updateAggregateReport(planId) <= 0) {
+    if (!pressureMeasurementService.updateAggregateReport(planId)) {
       return new MResponse<>().failedMResponse();
     }
     return new MResponse<>().successMResponse();
   }
 
+  /**
+   * 创建测试计划的整体聚合报告以及各个线程组的报告
+   * @param planId
+   * @return
+   */
   @GetMapping("/createAggregateReport")
   public MResponse<Object> createAggregateReport(int planId) {
-    if (pressureMeasurementService.addAggregateReport(planId)) {
+    if (pressureMeasurementService.addAggregateReport(planId) && pressureMeasurementService.addAggregateGroupReport(planId)) {
       return new MResponse<>().successMResponse();
     }
     return new MResponse<>().failedMResponse();
   }
+
 
   @GetMapping("/getTestResultsByID")
   public MResponse<List<TestResultVO>> getTestResultsById(int testPlanId) {
@@ -121,6 +139,7 @@ public class PressureMeasurementController {
         .data(pressureMeasurementService.getTestResultsByPlanId(testPlanId));
   }
 
+
   @GetMapping("/getTestResultByResultId")
   public MResponse<TestResultVO> getTestResultByResultId(int testResultId) {
     return new MResponse<TestResultVO>()
@@ -128,12 +147,28 @@ public class PressureMeasurementController {
         .data(pressureMeasurementService.getTestResultByResultId(testResultId));
   }
 
+
+  /**
+   * 获取某个测试计划下面的所有线程组的聚合报告
+   * @param planId
+   * @return
+   */
+  @GetMapping("/getAggregateGroupReportByPlanId")
+  public MResponse<List<AggregateReportEnhanceVO>> getAggregateGroupReportByPlanId(int planId) {
+    return new MResponse<List<AggregateReportEnhanceVO>>()
+        .successMResponse()
+        .data(aggregateGroupReportService.getAggregateGroupReportByPlanId(planId));
+  }
+
+
   @GetMapping("/getAggregateReportByPlanId")
   public MResponse<AggregateReportVO> getAggregateReportByPlanId(int planId) {
     return new MResponse<AggregateReportVO>()
-        .successMResponse()
-        .data(pressureMeasurementService.getAggregateReportByPlanId(planId));
+            .successMResponse()
+            .data(pressureMeasurementService.getAggregateReportByPlanId(planId));
   }
+
+
 
   @GetMapping("/getStartAndEndOfTest")
   public MResponse<int[]> getStartAndEndOfTest(int planId) {
@@ -147,18 +182,23 @@ public class PressureMeasurementController {
     return new MResponse<int[]>().successMResponse().data(startAndEnd);
   }
 
+
   @PostMapping("/aggregateReportExcel")
   public ResponseEntity<InputStreamResource> generateExcel(
       @RequestParam int planId, @RequestBody MonitorParam monitorParam) throws IOException {
+    //整个测试计划的聚合报告
     AggregateReportVO aggregateReportVO =
         pressureMeasurementService.getAggregateReportByPlanId(planId);
+    //每个线程组的聚合报告
+    List<AggregateReportEnhanceVO> aggregateGroupReport =
+            aggregateGroupReportService.getAggregateGroupReportByPlanId((planId));
     ArrayList<HardwareRecord> cpuUsage = monitorParam.getCpuUsage();
     ArrayList<HardwareRecord> memoryUsage = monitorParam.getMemoryUsage();
     ArrayList<NetworkRecord> byteTransmitted = monitorParam.getByteTransmitted();
     ArrayList<NetworkRecord> byteReceived = monitorParam.getByteReceived();
     InputStream inputStream =
         ExcelGenerator.generateAggregateReportExcel(
-            aggregateReportVO, cpuUsage, memoryUsage, byteTransmitted, byteReceived);
+            aggregateReportVO, aggregateGroupReport,cpuUsage, memoryUsage, byteTransmitted, byteReceived);
 
     if (inputStream != null) {
       InputStreamResource resource = new InputStreamResource(inputStream);

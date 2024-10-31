@@ -1,4 +1,4 @@
-package com.hitices.pressure.entity;
+package com.hitices.pressure.domain.enum_;
 
 public class TimerType {
     public static final int CONSTANT_TIMER = 1;

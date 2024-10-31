@@ -1,13 +1,23 @@
 package com.hitices.pressure.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.hitices.pressure.entity.*;
+import com.hitices.pressure.domain.vo.*;
 import org.apache.jmeter.samplers.SampleResult;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 public interface PressureMeasurementService {
+
+    //todo 修改了 boolean改为CompletableFuture<Boolean>
+
+    CompletableFuture<Boolean> commonMeasureFuture(TestPlanVO testPlanVO);
+
+    CompletableFuture<Boolean> boundaryMeasureFuture(TestPlanVO testPlanVO);
+
+    CompletableFuture<Boolean> measureFuture(int testPlanId);
+
 
     boolean commonMeasure(TestPlanVO testPlanVO);
 
@@ -33,7 +43,7 @@ public interface PressureMeasurementService {
 
     void updateTestPlan(TestPlanVO testPlanVO);
 
-    int updateAggregateReport(int planId);
+    boolean updateAggregateReport(int planId);
 
     void addTimers(List<TimerVO> timers, int threadGroupId);
 
@@ -43,6 +53,8 @@ public interface PressureMeasurementService {
 
     boolean addAggregateReport(AggregateReportVO aggregateReportVO);
 
+    boolean addAggregateGroupReport(int planId);
+
     List<TestResultVO> getTestResultsByPlanId(int planId);
 
     TestResultVO getTestResultByResultId(int testResultId);
@@ -50,5 +62,8 @@ public interface PressureMeasurementService {
     int[] getStartAndEndOfTest(int planId);
 
     List<AggregateReportVO> getBoundaryTestResult(int planId);
+
+    AggregateReportEnhanceVO getAggregateReportEnhanceByPlanId(Integer planId);
+
 
 }

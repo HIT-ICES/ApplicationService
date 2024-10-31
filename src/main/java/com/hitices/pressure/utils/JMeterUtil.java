@@ -2,7 +2,7 @@ package com.hitices.pressure.utils;
 
 import com.hitices.pressure.common.AggregateReport;
 import com.hitices.pressure.common.MyResultCollector;
-import com.hitices.pressure.entity.*;
+import com.hitices.pressure.domain.vo.*;
 import com.hitices.pressure.service.PressureMeasurementService;
 import org.apache.commons.lang.StringUtils;
 import org.apache.jmeter.config.Argument;
@@ -59,8 +59,11 @@ import java.util.Map;
 
 public class JMeterUtil {
 
-    public static String WINDOWS_HOME= "C:\\Neil\\Software\\Apache\\apache-jmeter-4.0\\";
-    public static String WINDOWS_FILE_PATH = "C:\\Neil\\Software\\Apache\\apache-jmeter-4.0\\bin\\jmeter.properties";
+    //todo 修改为了自己的路径
+    public static String WINDOWS_HOME= "D:\\aSoftWares\\apache-tomcat-10.1.6-windows-x64\\apache-jmeter-5.6.2";
+    public static String WINDOWS_FILE_PATH = "D:\\aSoftWares\\apache-tomcat-10.1.6-windows-x64\\apache-jmeter-5.6.2\\bin\\jmeter.properties";
+    //public static String WINDOWS_HOME= "C:\\Neil\\Software\\Apache\\apache-jmeter-4.0\\";
+    //public static String WINDOWS_FILE_PATH = "C:\\Neil\\Software\\Apache\\apache-jmeter-4.0\\bin\\jmeter.properties";
     public static String LINUX_HOME= "/opt/jmeter/";
     public static String LINUX_FILE_PATH = "/opt/jmeter/bin/jmeter.properties";
 
@@ -434,10 +437,10 @@ public class JMeterUtil {
         return headerManager;
     }
 
-    public static ResultCollector createResultCollector(PressureMeasurementService service, int planId) {
+    public static ResultCollector createResultCollector(PressureMeasurementService service, int planId,int groupId) {
 
         Summariser summer = new Summariser();
-        MyResultCollector resultCollector = new MyResultCollector(summer, planId);
+        MyResultCollector resultCollector = new MyResultCollector(summer, planId,groupId);
         resultCollector.setName("collector");
         resultCollector.setPressureMeasurementService(service);
         resultCollector.setProperty(TestElement.TEST_CLASS, ResultCollector.class.getName());
