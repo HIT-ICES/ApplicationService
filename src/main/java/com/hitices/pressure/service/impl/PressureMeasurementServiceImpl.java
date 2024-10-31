@@ -212,6 +212,7 @@ public class PressureMeasurementServiceImpl implements PressureMeasurementServic
     return null;
   }
 
+
   @Override
   public int[] getStartAndEndOfTest(int planId) {
     class StartTimeComparator implements Comparator<TestResultVO> {
@@ -710,6 +711,9 @@ public class PressureMeasurementServiceImpl implements PressureMeasurementServic
     TestPlanVO testPlan = pressureMeasurementMapper.getTestPlanById(planId);
     AggregateReportEnhanceVO result = new AggregateReportEnhanceVO();
     //将属性进行复制
+    if(ObjectUtils.isNull(aggregateReport) || ObjectUtils.isEmpty(aggregateReport)){
+      return null;
+    }
     BeanUtils.copyProperties(aggregateReport,result);
     result.setNamespace(testPlan.getNamespace());
     result.setPodName(testPlan.getPodName());

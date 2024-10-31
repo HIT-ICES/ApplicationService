@@ -161,6 +161,61 @@ public class JointPlanServiceImpl extends ServiceImpl<JointPlanMapper, JointPlan
         }).collect(Collectors.toList());
         return collect;
     }
+
+    @Override
+    @Transactional
+    public boolean updateJointPlan(JointPlanVO jointPlanVO) {
+        String name = jointPlanVO.getName();
+        String comment = jointPlanVO.getComment();
+        List<Integer> testPlanIds = jointPlanVO.getTestPlanIds();
+
+        //首先更新JointPlan
+        JointPlan jointPlan = new JointPlan();
+        jointPlan.setId(jointPlanVO.getId());
+        jointPlan.setJointPlanName(name);
+        jointPlan.setComment(comment);
+        jointPlan.setStatus("Created");
+        int i = this.baseMapper.updateById(jointPlan);
+        if(i <= 0) throw new RuntimeException("更新联合测试计划失败!");
+
+        //删除原来的映射关系
+        LambdaQueryWrapper<JointPlanMap> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(JointPlanMap::getJointPlanId,jointPlanVO.getId());
+        int delete = jointPlanMapMapper.delete(wrapper);
+        if(delete < 2) throw new RuntimeException("删除原有映射关系失败!");
+
+        //依次检查每个testPlanId是否存在,并添加新的映射关系到数据库
+        boolean isExist = testPlanIds.stream().allMatch(id -> {
+            TestPlanVO testPlanById = pressureMeasurementMapper.getTestPlanById(id);
+            if (ObjectUtils.isNotNull(testPlanById) && ObjectUtils.isNotEmpty(testPlanById)) {
+                JointPlanMap jointPlanMap = new JointPlanMap();
+                jointPlanMap.setJointPlanId(jointPlan.getId());
+                jointPlanMap.setPlanId(id);
+                int insert1 = jointPlanMapMapper.insert(jointPlanMap);
+                if(insert1 <= 0) return false;
+                return true;
+            }
+            return false;
+        });
+        //如果添加出现了问题，直接抛出异常，回滚事务
+        if(!isExist) {
+            throw new RuntimeException("更新联合测试计划与测试计划映射关系失败!");
+        }
+        return true;
+    }
+
+    @Override
+    public boolean removeJointPlanById(int jointPlanId) {
+        //删除joint Plan
+        int i = this.baseMapper.deleteById(jointPlanId);
+        if(i <= 0) return false;
+        //删除joint Plan 和 test Plan的映射关系
+        LambdaQueryWrapper<JointPlanMap> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(JointPlanMap::getJointPlanId,jointPlanId);
+        int delete = jointPlanMapMapper.delete(wrapper);
+        if(delete < 2) return false;
+        return true;
+    }
 }
 
 

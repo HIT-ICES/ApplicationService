@@ -42,4 +42,7 @@ public interface JointPlanService extends IService<JointPlan> {
 
     List<TestPlanVO> getJointTestPlanSonById(int jointPlanId);
 
+    boolean updateJointPlan(JointPlanVO jointPlanVO);
+
+    boolean removeJointPlanById(int jointPlanId);
 }
