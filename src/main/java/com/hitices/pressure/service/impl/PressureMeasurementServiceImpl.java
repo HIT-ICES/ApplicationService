@@ -9,9 +9,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hitices.pressure.common.BoundaryTestThread;
 import com.hitices.pressure.common.MeasureThread;
 import com.hitices.pressure.domain.entity.AggregateGroupReport;
+import com.hitices.pressure.domain.entity.JointPlanMap;
 import com.hitices.pressure.domain.enum_.TimerType;
 import com.hitices.pressure.domain.vo.*;
 import com.hitices.pressure.repository.AggregateGroupReportMapper;
+import com.hitices.pressure.repository.JointPlanMapMapper;
 import com.hitices.pressure.repository.PressureMeasurementMapper;
 import com.hitices.pressure.service.PressureMeasurementService;
 import com.hitices.pressure.utils.JMeterUtil;
@@ -48,6 +50,9 @@ public class PressureMeasurementServiceImpl implements PressureMeasurementServic
 
   @Autowired
   private AggregateGroupReportMapper aggregateGroupReportMapper;
+
+  @Autowired
+  private JointPlanMapMapper jointPlanMapMapper;
 
   @Override
   public boolean commonMeasure(TestPlanVO testPlanVO) {
@@ -479,7 +484,15 @@ public class PressureMeasurementServiceImpl implements PressureMeasurementServic
 
   @Override
   public int deleteTestPlan(int testPlanId) {
-    return pressureMeasurementMapper.deleteTestPlan(testPlanId);
+    //首先查询有没有和某些联合测试计划关联
+    LambdaQueryWrapper<JointPlanMap> wrapper = new LambdaQueryWrapper<>();
+    wrapper.eq(JointPlanMap::getPlanId,testPlanId);
+    List<JointPlanMap> jointPlanMaps = jointPlanMapMapper.selectList(wrapper);
+    if (ObjectUtils.isNotNull(jointPlanMaps) && ObjectUtils.isNotEmpty(jointPlanMaps)){
+      return -1;
+    }else {
+      return pressureMeasurementMapper.deleteTestPlan(testPlanId);
+    }
   }
 
   @Override

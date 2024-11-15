@@ -29,7 +29,9 @@ spec:
           image: 192.168.1.104:5000/application-service:v1.0
           imagePullPolicy: Always
           ports:
-            - containerPort: 8848
+            - name: tcp-8848
+              containerPort: 8848
+              protocol: TCP
           resources:
             requests:
               cpu: 100m

@@ -108,7 +108,8 @@ public class JointPlanServiceImpl extends ServiceImpl<JointPlanMapper, JointPlan
             List<String> collect = jointPlanMaps.stream().map(jointPlanMap -> {
                 Integer planId = jointPlanMap.getPlanId();
                 TestPlanVO testPlanById = pressureMeasurementMapper.getTestPlanById(planId);
-                return testPlanById.getTestPlanName();
+                if(testPlanById != null) return testPlanById.getTestPlanName();
+                return null;
             }).collect(Collectors.toList());
 
             List<Integer> collect1 = jointPlanMaps.stream().map(jointPlanMap -> {
