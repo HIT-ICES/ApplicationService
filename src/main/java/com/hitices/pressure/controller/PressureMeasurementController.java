@@ -96,7 +96,12 @@ public class PressureMeasurementController {
   @GetMapping("/deleteTestPlan")
   public MResponse<Object> deleteTestPlan(@RequestParam("testPlanId") int testPlanId) {
     int res = pressureMeasurementService.deleteTestPlan(testPlanId);
-    return new MResponse<>().successMResponse().set("rows", res);
+    if(res != -1){
+      return new MResponse<>().successMResponse().set("rows", res);
+    }else{
+      return new MResponse<>().failedMResponse().setStatus("请先删除其所属的联合测试计划!");
+    }
+
   }
 
   @PostMapping("/updateTestPlan")

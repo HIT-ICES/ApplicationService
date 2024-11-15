@@ -3,8 +3,6 @@ package com.hitices.pressure.controller;
 
 import com.baomidou.mybatisplus.core.toolkit.ObjectUtils;
 import com.hitices.pressure.common.MResponse;
-import com.hitices.pressure.domain.entity.AggregateGroupReport;
-import com.hitices.pressure.domain.entity.JointPlan;
 import com.hitices.pressure.domain.entity.JointPlanMap;
 import com.hitices.pressure.domain.vo.AggregateReportEnhanceVO;
 import com.hitices.pressure.domain.vo.AggregateReportVO;
@@ -13,10 +11,8 @@ import com.hitices.pressure.domain.vo.TestPlanVO;
 import com.hitices.pressure.service.AggregateGroupReportService;
 import com.hitices.pressure.service.JointPlanService;
 import com.hitices.pressure.service.PressureMeasurementService;
-import com.hitices.pressure.service.impl.AggregateGroupReportServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
-import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
