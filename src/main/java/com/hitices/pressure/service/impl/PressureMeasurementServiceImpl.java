@@ -202,6 +202,7 @@ public class PressureMeasurementServiceImpl implements PressureMeasurementServic
   @Override
   public TestPlanVO getTestPlanById(int testPlanId) throws JsonProcessingException {
     TestPlanVO testPlanVO = pressureMeasurementMapper.getTestPlanById(testPlanId);
+    //这里查询不到threadDelay
     if (testPlanVO != null) {
       refactorTestPlanVO(testPlanVO);
     }
@@ -639,6 +640,7 @@ public class PressureMeasurementServiceImpl implements PressureMeasurementServic
 
     ObjectMapper mapper = new ObjectMapper();
 
+    //为每一个线程组设置Timmer
     for (ThreadGroupVO threadGroupVO : testPlanVO.getThreadGroupList()) {
 
       threadGroupVO.setTimers(getTimersByThreadGroupId(threadGroupVO.getId()));

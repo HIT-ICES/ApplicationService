@@ -154,7 +154,17 @@
         from timer
         where thread_group_id = #{threadGroupId}
     </select>
-    <select id="getConstantTimerById" resultType="com.hitices.pressure.domain.vo.ConstantTimerVO">
+
+    <resultMap id="ConstantTimerResultMap" type="com.hitices.pressure.domain.vo.ConstantTimerVO">
+        <result column="id" property="id"/>
+        <result column="timer_name" property="timerName"/>
+        <result column="comment" property="comment"/>
+        <result column="timer_type" property="timerType"/>
+        <result column="thread_group_id" property="threadGroupId"/>
+        <result column="thread_delay" property="threadDelay"/>
+    </resultMap>
+
+    <select id="getConstantTimerById" resultMap="ConstantTimerResultMap">
         select *
         from constant_timer
         where id = #{id}

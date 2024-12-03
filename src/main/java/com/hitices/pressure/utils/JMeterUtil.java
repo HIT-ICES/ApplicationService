@@ -342,7 +342,6 @@ public class JMeterUtil {
         threadGroup.setDuration(threadGroupVO.getDuration());
         threadGroup.setDelay(threadGroupVO.getDelay());
 
-
         return threadGroup;
     }
 
