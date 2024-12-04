@@ -1,16 +1,19 @@
 package com.hitices.pressure.controller;
 
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.hitices.pressure.common.MResponse;
 import com.hitices.pressure.domain.entity.HardwareRecord;
 import com.hitices.pressure.domain.entity.MonitorParam;
 import com.hitices.pressure.domain.entity.NetworkRecord;
+import com.hitices.pressure.domain.entity.TestResult;
 import com.hitices.pressure.domain.vo.AggregateReportEnhanceVO;
 import com.hitices.pressure.domain.vo.AggregateReportVO;
 import com.hitices.pressure.domain.vo.TestPlanVO;
 import com.hitices.pressure.domain.vo.TestResultVO;
 import com.hitices.pressure.service.AggregateGroupReportService;
 import com.hitices.pressure.service.PressureMeasurementService;
+import com.hitices.pressure.service.TestResultService;
 import com.hitices.pressure.utils.ExcelGenerator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +36,8 @@ public class PressureMeasurementController {
   @Autowired private PressureMeasurementService pressureMeasurementService;
 
   @Autowired private AggregateGroupReportService aggregateGroupReportService;
+
+  @Autowired private TestResultService testResultService;
 
   /**
    * 获取所有的测试计划
@@ -138,10 +143,14 @@ public class PressureMeasurementController {
 
 
   @GetMapping("/getTestResultsByID")
-  public MResponse<List<TestResultVO>> getTestResultsById(int testPlanId) {
-    return new MResponse<List<TestResultVO>>()
-        .successMResponse()
-        .data(pressureMeasurementService.getTestResultsByPlanId(testPlanId));
+  public MResponse<IPage<TestResult>> getTestResultsById(
+          int testPlanId,
+          @RequestParam(required = false, defaultValue = "1") long current,
+          @RequestParam(required = false, defaultValue = "10") long size) {
+    IPage<TestResult> resultPage = testResultService.getTestResultsByPlanId(testPlanId, current, size);
+    return new MResponse<IPage<TestResult>>()
+            .successMResponse()
+            .data(resultPage);
   }
 
 

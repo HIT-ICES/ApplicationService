@@ -53,7 +53,6 @@ public class MeasureThread implements Runnable {
             for (ThreadGroupVO threadGroupVO : testPlanVO.getThreadGroupList()) {
                 HashTree threadGroupTree = new HashTree();
                 ThreadGroup threadGroup = JMeterUtil.createThreadGroup(threadGroupVO);
-
                 //创建循环控制器
                 LoopController loopController = JMeterUtil.createLoopController(threadGroupVO.getLoopControllerVO());
                 //为线程组添加循环控制器
