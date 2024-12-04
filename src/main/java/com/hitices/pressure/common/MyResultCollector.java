@@ -52,7 +52,6 @@ public class MyResultCollector extends ResultCollector {
                 result.getHeadersSize(),
                 result.getBodySizeAsLong(),
                 result.getSentBytes());
-
         pressureMeasurementService.addTestResult(testResultVO);
     }
 
