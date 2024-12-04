@@ -286,7 +286,7 @@ public class PressureMeasurementServiceImpl implements PressureMeasurementServic
       double sum =
           resultList.stream()
               .reduce(0f, (result, item) -> result + item.getLatency(), (i1, i2) -> i1 + i2);
-      int errorNum =
+      double errorNum =
           resultList.stream()
               .reduce(
                   0, (result, item) -> result + (item.isSuccess() ? 0 : 1), (i1, i2) -> i1 + i2);
@@ -724,10 +724,16 @@ public class PressureMeasurementServiceImpl implements PressureMeasurementServic
   public AggregateReportEnhanceVO getAggregateReportEnhanceByPlanId(Integer planId) {
     AggregateReportVO aggregateReport = pressureMeasurementMapper.getAggregateReport(planId);
     TestPlanVO testPlan = pressureMeasurementMapper.getTestPlanById(planId);
+    List<ThreadGroupVO> groups = pressureMeasurementMapper.getThreadGroupsByTestPlanId(planId);
     AggregateReportEnhanceVO result = new AggregateReportEnhanceVO();
     //将属性进行复制
     if(ObjectUtils.isNull(aggregateReport) || ObjectUtils.isEmpty(aggregateReport)){
       return null;
+    }
+    if(ObjectUtils.isNotNull(groups) && ObjectUtils.isNotEmpty(groups)){
+      ThreadGroupVO threadGroupVO = groups.get(0);
+      int threadNum = threadGroupVO.getThreadNum();
+      result.setThreadNum(threadNum);
     }
     BeanUtils.copyProperties(aggregateReport,result);
     result.setNamespace(testPlan.getNamespace());

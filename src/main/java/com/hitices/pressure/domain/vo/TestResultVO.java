@@ -27,8 +27,7 @@ public class TestResultVO {
     private int headersSize;
     private long bodySize;
     private long sentBytes;
-
-
+    
 //    public boolean getSuccess() {
 //        return this.success;
 //    }

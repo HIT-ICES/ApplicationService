@@ -16,4 +16,6 @@ public class AggregateReportEnhanceVO extends AggregateReportVO{
     String podName;
 
     String name;
+
+    int threadNum;
 }
